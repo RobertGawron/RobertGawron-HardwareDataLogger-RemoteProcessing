@@ -1,0 +1,65 @@
+@startuml
+title Hardware Data Logger Deployment Diagram
+top to bottom direction
+
+actor User
+
+node "Device #1" as device_1 #LightGreen
+node "Device #2" as device_2 #LightGreen
+node "Device #n" as device_n #LightGreen
+
+node "HardwareDataLogger" #LightBlue {
+    component "STM32F103RBTx chip"
+    component "ESP8266MOD chip"
+
+    "STM32F103RBTx chip" -down-> "ESP8266MOD chip"
+}
+
+node "Host Machine (Raspberry Pi or User's PC)" #LightYellow {
+    portin "Port 3000"
+    portin "Port 1883"
+
+    component "Grafana" <<docker>> as grafana #F1F1F1{
+        portin "Port 3000" as grafana_web
+    }
+
+    database "InfluxDB" <<docker>> as influx_db #F1F1F1{
+        portin "Port 8086" as influx_io     
+    }
+
+    component "Telegraf" <<docker>> as telegraf{
+    }
+
+    component "Paho-MQTT" <<docker>> #F1F1F1 {
+        portin "Port 1883" as mqtt_io
+    }
+
+    component "hw-mock" <<docker>> as hw_mock{
+    }
+
+    "Port 3000" -down-> grafana_web
+    "Port 1883" -left-> mqtt_io
+
+    grafana  --> influx_io 
+    telegraf --> influx_io
+    mqtt_io -left-> telegraf
+    hw_mock -left-> mqtt_io
+
+}
+
+note right of hw_mock 
+    Used to provide simulated
+    data for testing purposes
+    when real hardware is
+    unavailable or excluded
+    from tests.
+end note
+
+User ----> "Port 3000" : Web Site
+"ESP8266MOD chip" -down-> "Port 1883" : MQTT
+
+device_1 -down-> "STM32F103RBTx chip"
+device_2 -down-> "STM32F103RBTx chip"
+device_n -down-> "STM32F103RBTx chip"
+
+@enduml
