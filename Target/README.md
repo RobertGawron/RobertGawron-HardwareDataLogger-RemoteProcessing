@@ -1,3 +1,28 @@
+
+docker buildx bake --platform linux/arm64
+
+
+docker-compose run hwlogger-arm-builder \
+  docker hwlogger-arm-builder \
+  --platform linux/arm/v7,linux/arm64 \
+  --tag your_image_name:latest \
+  --push .
+
+
+
+
+
+
+
+
+
+docker buildx bake --set *.platform=linux/arm64
+
+
+
+
+
+
 # Setup
 
 All commands will be executed from the host machine unless stated otherwise.
@@ -108,20 +133,6 @@ No additional configuration is required for MQTT as the default setup is used.
 
    On the host machine, modify `DevOps/PiDev/Telegraf/telegraf.conf` to include the same bucket, organization, and token as specified during the InfluxDB setup:
 
-   ```toml
-   [[inputs.mqtt_consumer]]
-     servers = ["tcp://mqtt-broker:1883"]
-     topics = ["sensor/data"]
-     data_format = "json"
-     json_time_key = "timestamp"
-     json_time_format = "unix"
-
-   [[outputs.influxdb_v2]]
-     urls = ["http://influxdb:8086"]
-     bucket = "hwbucket"
-     organization = "hworg"
-     token = "<Your_Token_Here>"
-   ```
 
 2. **Restart Telegraf:**
    Restart the Telegraf container to apply changes:

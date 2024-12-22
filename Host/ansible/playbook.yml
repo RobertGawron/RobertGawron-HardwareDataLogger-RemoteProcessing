@@ -1,0 +1,103 @@
+---
+- name: Install Docker and Deploy Containers via Docker Compose on Raspberry Pi
+  hosts: raspberry_pi
+  become: yes
+
+  roles:
+    - role: nickjj.docker
+      vars:
+        # Make sure we're installing Docker Compose v2, not v1
+        docker_install_compose_v1: false
+        
+        docker_install_compose_v2: false
+
+        # Enable the Docker Compose v2 plugin
+        docker_compose_cli_plugin: true
+        
+        # Create a symlink for `docker-compose` => `docker compose`
+        docker_compose_symlink_legacy_bin: true
+        
+        # Pin the Compose version if you want a specific one
+        # e.g. "v2.20.2" (the leading 'v' is typically needed)
+        docker_compose_version: "v2.20.2"
+
+        # You might also set the Docker users if you want a non-root user to have Docker access
+        docker_users:
+          - robert
+
+  vars:
+    # The Docker images you have saved as .tar files
+    docker_images:
+      - name: "grafana/grafana:latest"
+        tar_file: "grafana_grafana_latest.tar"
+      - name: "influxdb:latest"
+        tar_file: "influxdb_latest.tar"
+      - name: "telegraf:latest"
+        tar_file: "telegraf_latest.tar"
+      - name: "hw-mock:latest"
+        tar_file: "hw-mock_latest.tar"
+
+    # Where on the Pi to store everything
+    deploy_path: "/workspace/hw_logger"
+
+  tasks:
+    #################################################################
+    # 1) Create the deployment folder (/workspace/hw_logger).
+    #################################################################
+    - name: Create workspace directory
+      file:
+        path: "{{ deploy_path }}"
+        state: directory
+        mode: '0755'
+        owner: "{{ ansible_user | default('pi') }}"
+        group: "{{ ansible_user | default('pi') }}"
+
+    #################################################################
+    # 2) Synchronize your Docker .tar files + docker-compose.yml 
+    #    into the workspace on the Pi.
+    #################################################################
+    - name: Synchronize Docker .tar files
+      synchronize:
+        src: "{{ item.tar_file }}"
+        dest: "{{ deploy_path }}/{{ item.tar_file }}"
+      loop: "{{ docker_images }}"
+      tags: images
+
+    - name: Copy docker-compose.yml
+      copy:
+        src: "files/docker-compose.yml"
+        dest: "{{ deploy_path }}/docker-compose.yml"
+        mode: '0644'
+        owner: "{{ ansible_user | default('pi') }}"
+        group: "{{ ansible_user | default('pi') }}"
+
+    #################################################################
+    # 3) Load the Docker images from .tar files.
+    #################################################################
+    - name: Load Docker images from tar files
+      command: "docker load -i {{ deploy_path }}/{{ item.tar_file }}"
+      loop: "{{ docker_images }}"
+      changed_when: true
+      tags: images
+
+
+
+    - name: Allow inbound ports 3000 and 1883
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop:
+        - 3000
+        - 1883
+
+
+
+    #################################################################
+    # 5) Run docker compose up -d to start containers.
+    #################################################################
+    - name: Run docker compose up -d
+      command: docker compose up -d
+      args:
+        chdir: "{{ deploy_path }}"
+      become_user: "{{ ansible_user | default('pi') }}"

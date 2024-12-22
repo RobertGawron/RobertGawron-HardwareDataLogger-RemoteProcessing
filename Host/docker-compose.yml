@@ -1,0 +1,25 @@
+services:
+  hwlogger-arm-builder:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hwlogger-arm-builder
+    volumes:
+      - ../Target/Dockerfile:/workspace/Dockerfile
+      - ../Target/README.md:/workspace/README.md
+      - ../Target/docker-compose.yml:/workspace/docker-compose.yml
+      - ./ansible:/workspace/ansible
+      - ./.ssh:/root/.ssh_host # keys are ignored in .gitignore so they wont be stored to git
+      #- ./scripts/entrypoint.sh:/root/entrypoint.sh
+      #- ./scripts/mount_ssh.sh:/workspace/mount_ssh.sh
+      #- ./scripts/docker_export.sh:/root/docker_export.sh
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - DOCKER_CLI_EXPERIMENTAL=enabled # Enable Docker experimental features (for buildx)
+    tty: true
+    stdin_open: true
+    #entrypoint: ["/workspace/entrypoint.sh && /bin/bash"]
+    command: >
+      sh -c "
+      /workspace/entrypoint.sh &&
+      exec /bin/bash"

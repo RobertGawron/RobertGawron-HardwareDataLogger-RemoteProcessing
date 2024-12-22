@@ -1,13 +1,14 @@
 services:
   hw-mock:
     image: hw-mock:latest
+    platform: linux/arm64  # Target Raspberry Pi (ARM64)
     build:
       context: .
-      dockerfile: DevOps/PiDev/Dockerfile
+      dockerfile: Dockerfile
     privileged: true
     command: ["tail", "-f", "/dev/null"]
-    environment:
-      - DISPLAY=${DISPLAY}   # Forward the host's display
+    #environment:
+    #  - DISPLAY=${DISPLAY}   # Forward the host's display
     stdin_open: true  # Keep stdin open for interaction
     tty: true         # Allocate a TTY for interactive Bash      
     volumes:
@@ -16,20 +17,9 @@ services:
       - app-network
     restart: unless-stopped
 
-  mqtt-broker:
-    image: eclipse-mosquitto:latest
-    ports:
-      - "1883:1883"  # MQTT
-      - "9001:9001"  # WebSocket (optional)
-    volumes:
-      - mosquitto_config:/mosquitto/config  # Persist configuration
-      - mosquitto_data:/mosquitto/data      # Persist data
-      - mosquitto_log:/mosquitto/log        # Persist logs
-    networks:
-      - app-network
-
   influxdb:
     image: influxdb:latest
+    platform: linux/arm64  # Target Raspberry Pi (ARM64)
     ports:
       - "8086:8086"
     volumes:
@@ -40,6 +30,7 @@ services:
 
   grafana:
     image: grafana/grafana:latest
+    platform: linux/arm64  # Target Raspberry Pi (ARM64)
     ports:
       - "3000:3000"  # Grafana
     volumes:
@@ -52,12 +43,12 @@ services:
 
   telegraf:
     image: telegraf:latest
-    volumes:
+    platform: linux/arm64  # Target Raspberry Pi (ARM64)
+    #volumes:
     #  - telegraf_config:/etc/telegraf       # Persist configuration
-      - ./DevOps/PiDev/Telegraf/telegraf.conf:/etc/telegraf/telegraf.conf
+    #  - ./Telegraf/telegraf.conf:/etc/telegraf/telegraf.conf
     depends_on:
       - influxdb
-      - mqtt-broker
     networks:
       - app-network
 
@@ -67,9 +58,6 @@ networks:
 
 volumes:
   raspberry_host_config:
-  mosquitto_config:
-  mosquitto_data:
-  mosquitto_log:
   influxdb_config:
   influxdb_data:
   grafana_config:
